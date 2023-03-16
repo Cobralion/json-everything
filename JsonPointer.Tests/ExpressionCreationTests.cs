@@ -67,4 +67,24 @@ public class ExpressionCreationTests
 
 		Assert.AreEqual(expected, actual.ToString());
 	}
+	
+	[Test]
+	public void ArrayWithDynamicIndex()
+	{
+		var expected = "/StringArray/2";
+		var index = 2;
+		var actual = JsonPointer.Create<TestClass>(x => x.StringArray[index]);
+
+		Assert.AreEqual(expected, actual.ToString());
+	}
+	
+	[Test]
+	public void ListWithDynamicIndex()
+	{
+		var expected = "/NestMore/5/Nest";
+		var index = 5;
+		var actual = JsonPointer.Create<TestClass>(x => x.NestMore[index].Nest);
+
+		Assert.AreEqual(expected, actual.ToString());
+	}
 }

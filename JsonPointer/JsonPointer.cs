@@ -175,7 +175,15 @@ public class JsonPointer : IEquatable<JsonPointer>
 					 mce.Arguments.Count == 1 &&
 					 mce.Arguments[0].Type == typeof(int))
 			{
-				segments.Insert(0, PointerSegment.Create(mce.Arguments[0].ToString()));
+				if (mce.Arguments[0] is MemberExpression memberExpression)
+				{
+					var index = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
+					segments.Insert(0, PointerSegment.Create(index.ToString()));
+				}
+				else
+				{
+					segments.Insert(0, PointerSegment.Create(mce.Arguments[0].ToString()));
+				}
 				body = mce.Object;
 			}
 			else if (body is BinaryExpression { Right: ConstantExpression arrayIndexExpression } binaryExpression
@@ -184,6 +192,14 @@ public class JsonPointer : IEquatable<JsonPointer>
 				// Array index
 				segments.Insert(0, PointerSegment.Create(arrayIndexExpression.Value.ToString()));
 				body = binaryExpression.Left;
+			}
+			else if (body is BinaryExpression { Right: MemberExpression memberExpression } binaryExpression1
+			         and { NodeType: ExpressionType.ArrayIndex })
+			{
+				var index = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
+				// Array index
+				segments.Insert(0, PointerSegment.Create(index.ToString()));
+				body = binaryExpression1.Left;
 			}
 			else if (body is ParameterExpression) break; // this is the param of the expression itself.
 			else throw new NotSupportedException($"Expression nodes of type {body.NodeType} are not currently supported.");
