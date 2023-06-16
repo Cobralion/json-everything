@@ -151,12 +151,13 @@ public class JsonPointer : IEquatable<JsonPointer>
 	/// </summary>
 	/// <typeparam name="T">The type of the object.</typeparam>
 	/// <param name="expression">The lambda expression which gives the pointer path.</param>
+	/// <param name="option">This is not in the original library (c) Maurice Lindner - Aveo Solutions GmbH</param>
 	/// <returns>The JSON Pointer.</returns>
 	/// <exception cref="NotSupportedException">
 	/// Thrown when the lambda expression contains a node that is not a property access or
 	/// <see cref="int"/>-valued indexer.
 	/// </exception>
-	public static JsonPointer Create<T>(Expression<Func<T, object>> expression)
+	public static JsonPointer Create<T>(Expression<Func<T, object>> expression, JsonConvertOption option = JsonConvertOption.Default)
 	{
 		var body = expression.Body;
 		var segments = new List<PointerSegment>();
@@ -167,7 +168,13 @@ public class JsonPointer : IEquatable<JsonPointer>
 
 			if (body is MemberExpression me)
 			{
-				segments.Insert(0, PointerSegment.Create(me.Member.Name));
+				// (c) Maurice Lindner - Aveo Solutions GmbH
+				// This is not in the original json-everthing library.
+				var memberName = me.Member.Name;
+				if(option == JsonConvertOption.LeadingCharToLowerCase)
+					memberName = memberName.Substring(0, 1).ToLower() + memberName.Substring(1);
+				segments.Insert(0, PointerSegment.Create(memberName));
+				// END
 				body = me.Expression;
 			}
 			else if (body is MethodCallExpression mce &&
@@ -193,6 +200,8 @@ public class JsonPointer : IEquatable<JsonPointer>
 				segments.Insert(0, PointerSegment.Create(arrayIndexExpression.Value.ToString()));
 				body = binaryExpression.Left;
 			}
+			// (c) Maurice Lindner - Aveo Solutions GmbH
+			// This is not in the original json-everthing library.
 			else if (body is BinaryExpression { Right: MemberExpression memberExpression } binaryExpression1
 			         and { NodeType: ExpressionType.ArrayIndex })
 			{
@@ -201,6 +210,7 @@ public class JsonPointer : IEquatable<JsonPointer>
 				segments.Insert(0, PointerSegment.Create(index.ToString()));
 				body = binaryExpression1.Left;
 			}
+			// END
 			else if (body is ParameterExpression) break; // this is the param of the expression itself.
 			else throw new NotSupportedException($"Expression nodes of type {body.NodeType} are not currently supported.");
 		}
@@ -414,4 +424,21 @@ public class JsonPointer : IEquatable<JsonPointer>
 	{
 		return !Equals(left, right);
 	}
+}
+
+/// <summary>
+/// Indicates how to encode the pointer.
+/// (c) Maurice Lindner - Aveo Solutions GmbH
+/// This is not in the original json-everthing library.
+/// </summary>
+public enum JsonConvertOption
+{
+	/// <summary>
+	/// Default options.
+	/// </summary>
+	Default = 0,
+	/// <summary>
+	/// Convert leading character of property names to lower case.
+	/// </summary>
+	LeadingCharToLowerCase = 1,
 }
